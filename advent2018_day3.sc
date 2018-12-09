@@ -1,22 +1,25 @@
-//val lines = scala.io.Source.fromFile("input.txt").getLines().toList
+val data = scala.io.Source.fromFile("input.txt").getLines().toList
 
-val data = List("#1 @ 1,3: 4x4", "#2 @ 3,1: 4x4", "#3 @ 5,5: 2x2")
+val regex = "#([0-9]+) @ ([0-9]+),([0-9]+): ([0-9]+)x([0-9]+)".r
 
-case class Point(x: Int, y: Int) {
-  def +(point: Point): Point = new Point(x + point.x, y + point.y)
+case class Claim(id: Int, x: Int, y: Int,  w: Int, h: Int)
+case class Patch(claimId: Int, x: Int, y: Int)
+
+val claims = data.map {
+  case regex(id, x, y, w, h) => Claim(id.toInt, x.toInt, y.toInt, w.toInt, h.toInt)
 }
 
-object Point {
-  def apply(s: String): Point = s.split(",|x").map(_.toInt) match { case Array(x, y) => new Point(x, y)}
-}
+val patches = for {
+  claim <- claims
+  x <- 0 until claim.w
+  y <- 0 until claim.h
+} yield Patch(claim.id, claim.x + x, claim.y + y)
 
-case class Claim(id: Int, offset: Point, dims: Point)
+// Day 3, Part 1
+patches.groupBy(p => (p.x, p.y)).count(_._2.size > 1)
 
-object Claim {
-  def apply(s: String): Claim = {
-    val Array(id, off, dim) = s.replaceAll("\\s", "").split(Array('#', '@', ':')).filterNot(_.isEmpty)
-    new Claim(id.toInt, Point(off), Point(off) + Point(dim))
-  }
-}
+// Day 3, Part 2
+val nooverlaps = patches.groupBy(p => (p.x, p.y)).filter(_._2.size == 1).map(_._2.map(_.claimId)).flatten.toSet
+val overlaps = patches.groupBy(p => (p.x, p.y)).filter(_._2.size > 1).map(_._2.map(_.claimId)).flatten.toSet
 
-data.map(Claim(_))
+nooverlaps -- overlaps
